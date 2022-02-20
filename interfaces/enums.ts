@@ -1,0 +1,4 @@
+export enum Roles {
+  DEFAULT_ADMIN_ROLE = "DEFAULT_ADMIN_ROLE",
+  BRIDGE_ROLE = "BRIDGE_ROLE",
+}
