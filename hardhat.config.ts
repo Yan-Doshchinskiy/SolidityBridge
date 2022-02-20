@@ -8,7 +8,8 @@ import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "./tasks/index.ts";
-import * as process from "process";
+import { ChainEnv, Chains } from "./interfaces/enums";
+import { NetworkUserConfig } from "hardhat/src/types/config";
 
 dotenv.config();
 
@@ -16,29 +17,21 @@ interface IConfig extends HardhatUserConfig {
   gasReporter?: EthGasReporterConfig;
 }
 
-const url = process.env.CHAIN_URL as string;
-const ownerPrivateKey = process.env.OWNER_PRIVATE_KEY as string;
-const secondSignerPrivateKey = process.env.SECOND_SIGNER_KEY as string;
-const accounts = [ownerPrivateKey, secondSignerPrivateKey].filter(
-  (account: string): boolean => !!account
-);
-const chainId = Number(process.env.CHAIN_ID as string) || 0;
-const reportGas = (process.env.REPORT_GAS as string) === "true";
-const apiKey = process.env.API_KEY as string;
-const ethBridge = process.env.ETH_BRIDGE_ADDRESS as string;
-const bscBridge = process.env.BSC_BRIDGE_ADDRESS as string;
-const gateway = process.env.GATEWAY_ADDRESS as string;
+const reportGas = process.env.REPORT_GAS === "true";
+const ethApiKey = process.env.RINKEBY_API_KEY as string;
+const bscApiKey = process.env.BSC_TEST_API_KEY as string;
 
-type IEnvItem = { value: string | number; key: string };
+type IEnvItem = { value: string | number | undefined; key: string };
 
 const requiredEnvs: Array<IEnvItem> = [
-  { value: url, key: "CHAIN_URL" },
-  { value: ownerPrivateKey, key: "PRIVATE_KEY" },
-  { value: chainId, key: "CHAIN_ID" },
-  { value: apiKey, key: "API_KEY" },
-  { value: ethBridge, key: "ETH_BRIDGE_ADDRESS" },
-  { value: bscBridge, key: "BSC_BRIDGE_ADDRESS" },
-  { value: gateway, key: "GATEWAY_ADDRESS" },
+  { value: ethApiKey, key: "RINKEBY_API_KEY" },
+  { value: process.env.RINKEBY_CHAIN_URL, key: "RINKEBY_CHAIN_URL" },
+  { value: process.env.RINKEBY_CHAIN_ID, key: "RINKEBY_CHAIN_ID" },
+  { value: process.env.RINKEBY_PRIVATE_KEY, key: "RINKEBY_PRIVATE_KEY" },
+  { value: bscApiKey, key: "BSC_TEST_API_KEY" },
+  { value: process.env.BSC_TEST_CHAIN_URL, key: "BSC_TEST_CHAIN_URL" },
+  { value: process.env.BSC_TEST_CHAIN_ID, key: "BSC_TEST_CHAIN_ID" },
+  { value: process.env.BSC_TEST_PRIVATE_KEY, key: "BSC_TEST_PRIVATE_KEY" },
 ];
 
 requiredEnvs.forEach((item: IEnvItem): void => {
@@ -48,6 +41,17 @@ requiredEnvs.forEach((item: IEnvItem): void => {
     );
   }
 });
+
+const getChainConfig = (chain: Chains): NetworkUserConfig => {
+  const url = process.env[`${ChainEnv[chain]}_CHAIN_URL`] as string;
+  const privateKey = process.env[`${ChainEnv[chain]}_PRIVATE_KEY`] as string;
+  const chainId = Number(process.env[`${ChainEnv[chain]}_CHAIN_ID`]);
+  return {
+    url,
+    accounts: [privateKey],
+    chainId,
+  };
+};
 
 const config: IConfig = {
   solidity: {
@@ -60,11 +64,8 @@ const config: IConfig = {
     },
   },
   networks: {
-    rinkeby: {
-      url,
-      accounts: accounts,
-      chainId,
-    },
+    [Chains.RINKEBY as string]: getChainConfig(Chains.RINKEBY),
+    [Chains.BSC_TEST as string]: getChainConfig(Chains.BSC_TEST),
   },
   gasReporter: {
     enabled: reportGas,
@@ -77,8 +78,9 @@ const config: IConfig = {
     sources: "./contracts",
     tests: "./test",
   },
+
   etherscan: {
-    apiKey,
+    apiKey: ethApiKey,
   },
   mocha: {
     timeout: 500000,
